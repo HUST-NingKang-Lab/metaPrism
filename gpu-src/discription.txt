@@ -1,0 +1,18 @@
+2018年12月17日
+开始修改GPU代码
+已修改t_number（不再考虑CPU核心数量了）
+把databse的.h文件直接拷过去了，因为好像.cu和.h不太对
+arg在gpu中调用[0]个就好
+将load_abd放在前面
+需要加进去的：Id,Order_1, Dist_1, Order_2, Dist_2, Order_d
+struct CompData{
+        float Dist_1[OrderN];
+        float Dist_2[OrderN];
+        int Order_1[OrderN];
+        int Order_2[OrderN];
+        int Order_d[OrderN];
+        int Id[LeafN];
+}
+调试了一下，现在能在linux上编译了
+编译命令：
+nvcc -x cu query_index.cpp -o demo.out
