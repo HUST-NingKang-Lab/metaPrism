@@ -137,7 +137,7 @@ int gpu_compare::act()
         cout<<"gpu_compare state error\n";
         return 2;
     }
-    blocks=this->count/1+1;
+    blocks=this->count/16+1;
     gpu_Calc_sim<<<blocks, 16>>>(this->g_compData, this->g_abd1, this->g_abd2, this->g_results,this->count);
     this->state=3;
     return 0;
