@@ -2,7 +2,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
-#include <map>
+#include <unordered_map>
 #include <cmath>
 #include <time.h>
 #include <sys/time.h>
@@ -154,7 +154,7 @@ void Load_id(const char * infilename, int * id){
 
 float Load_abd(const char * infilename, int * id, float * abd){
     
-    map<int, int> hash;
+    unordered_map<int, int> hash;
      
     ifstream infile(infilename, ifstream::in);
     if (!infile){
@@ -182,9 +182,7 @@ float Load_abd(const char * infilename, int * id, float * abd){
                           
                           strin >> seq_id >> current_id;
                           
-                          if (hash.count(current_id) == 0)
-                                                     hash[current_id] = 1;
-                          else hash[current_id] ++;
+                          hash[current_id] ++;
                           }
     
     for (int i = 0; i < LeafN; i++)
@@ -203,7 +201,42 @@ float Load_abd(const char * infilename, int * id, float * abd){
     return shannon;
     }
     
-
+void Load_abd_v(const char * infilename, int * id, float * abd){
+    
+    map<int, int> hash;
+     
+    ifstream infile(infilename, ifstream::in);
+    if (!infile){
+                  cerr << "Cannot open file : " << infilename << endl;
+                  exit(0);
+                  }
+    
+    string buffer;
+    int line_count = 0;
+    getline(infile, buffer); //label
+    
+    while(getline(infile, buffer)){
+                          
+                          if (buffer.size() == 0) continue;
+                          
+                          line_count ++;
+                          
+                          string seq_id;
+                          int current_id;                          
+                          
+                          stringstream strin(buffer);
+                          
+                          strin >> seq_id >> current_id;
+                          
+                           hash[current_id] ++;
+                          }
+     for (int i = 0; i < LeafN; i++)
+        abd[i] = (float)hash[id[i]] * 100 / (float)line_count;
+    infile.close();
+    infile.clear();
+    return ;
+    }
+ 
 
 void Load_order(const char * infilename, int * Order_1, float * Dist_1, int * Order_2, float * Dist_2, int * Order_d){
     ifstream infile(infilename, ifstream::in);

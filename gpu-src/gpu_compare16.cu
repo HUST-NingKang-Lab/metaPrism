@@ -1,5 +1,4 @@
 #include <iostream>
-
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include <stdlib.h>
@@ -32,15 +31,8 @@ struct CompData
     int Id[LeafN];
 };
 
-
-
-
-
-
-
 #ifndef GPUC
 #define GPUC
-
 __global__ void gpu_Calc_sim(CompData *cd, Abd *v_Abd_1, Abd *v_Abd_2, float *results, int count);
 
 class gpu_compare
@@ -59,6 +51,7 @@ public:
     */
 
 private:
+    bool memFlag;
     int maxMem, deviceID, countCore,state,count;
     cudaDeviceProp deviceProp;
     size_t freeMem, totalMem;
@@ -76,7 +69,7 @@ gpu_compare::gpu_compare()
     this->countCore = this->deviceProp.multiProcessorCount;
     cudaMemGetInfo(&freeMem, &totalMem);
     //cout<<"the best block size is : "<<this->bestBlockSize<<endl;
-	//cout<<"the min Grid size is : "<<this->minGridSize<<endl;
+    //cout<<"the min Grid size is : "<<this->minGridSize<<endl;
     if(1)
     {
         cout<<"now using "<<this->deviceProp.name<<" device id:"<<this->deviceID<<endl;
@@ -86,9 +79,14 @@ gpu_compare::gpu_compare()
     }
     this->compFlag=1;
     this->state=1;
+    //sprintf(cbuff,"%s/%s",PATH,"CMPDATA.txt");
+    //sprintf(cbuff,"%s/%s",PATH,"IMTDATA.txt");
+    //sprintf(cbuff,"%s/%s",PATH,"OUTDATA.txt");
+    memFlag= true;
 }
 int gpu_compare::sendData(CompData *cd, Abd *abd1, Abd *abd2,int count, int version )
 {
+    char cbuff[50];
     /*
     1 for no enough memory
     2 for state error
@@ -103,7 +101,6 @@ int gpu_compare::sendData(CompData *cd, Abd *abd1, Abd *abd2,int count, int vers
     this->abd1 = abd1;
     this->abd2 = abd2;
     this->version = version;
-	
     if (totalMem<sizeof(float)*(LeafN*(count+1)+count)*1.1)
     {
         cout<<"no enough gpu memory, will update later to support it\n";
@@ -124,7 +121,6 @@ int gpu_compare::sendData(CompData *cd, Abd *abd1, Abd *abd2,int count, int vers
     cudaMemcpy(this->g_compData,cd,sizeof(CompData),cudaMemcpyHostToDevice);
     cudaMemcpy(this->g_abd1,abd1,sizeof(Abd),cudaMemcpyHostToDevice);
     cudaMemcpy(this->g_abd2,abd2,sizeof(Abd)*count,cudaMemcpyHostToDevice);
-
     this->state=2;
     return 0;
 }
@@ -197,7 +193,6 @@ __global__ void gpu_Calc_sim(CompData *cd, Abd *v_Abd_1, Abd *v_Abd_2, float *re
     //start origin data
     float Reg_1[70];
     float Reg_2[70];
-    float Reg_abs[70];
 
     float total = 0;
     float total2=0;
@@ -220,63 +215,39 @@ __global__ void gpu_Calc_sim(CompData *cd, Abd *v_Abd_1, Abd *v_Abd_2, float *re
         float c2_1;
         float c2_2;
 
-        float abs_1;
-        float abs_2;
 
         if (order_1 >= 0){
 
             c1_1 = Abd_1[order_1];
             c1_2 = Abd_2[order_1];
-            abs_1=abs(Abd_1[order_1]- Abd_2[order_1]) * 0.5;
         }
         else {
             c1_1 = Reg_1[order_1 + 70];
             c1_2 = Reg_2[order_1 + 70];
-            abs_1=Reg_abs[order_1 + 70];
         }
 
         if (order_2 >= 0){
 
             c2_1 = Abd_1[order_2];
             c2_2 = Abd_2[order_2];
-            abs_2=abs(Abd_1[order_2]-Abd_2[order_2]) * 0.5;
 
         }
         else {
             c2_1 = Reg_1[order_2 + 70];
             c2_2 = Reg_2[order_2 + 70];
-            abs_2 = Reg_abs[order_2 + 70];
         }
         //min
         float min_1 = (c1_1 < c1_2)?c1_1:c1_2;
         float min_2 = (c2_1 < c2_2)?c2_1:c2_2;
 
         total += min_1;
-        total2 += abs(c1_1-c1_2);
-
-
         total += min_2;
-        total2 += abs(c2_1-c2_2);
-
-
-        /*if(abs(c2_1-c2_2) !=0  || abs(c1_1-c1_2) !=0)
-        {
-        cout<<c1_1<<"-"<<c1_2<<"="<<c1_1-c1_2<<" "<<abs(c1_1-c1_2)<<endl;
-        cout<<c2_1<<"-"<<c2_2<<"="<<c2_1-c2_2<<" "<<abs(c2_1-c2_2)<<endl;
-        cout<<"total2:"<<total2<<endl;
-        }
-        */
-
-
 
         //reduce
         Reg_1[order_d] = (c1_1 - min_1) * dist_1 + (c2_1 - min_2) * dist_2;
         Reg_2[order_d] = (c1_2 - min_1) * dist_1 + (c2_2 - min_2) * dist_2;
-        Reg_abs[order_d]= abs_1*dist_1 + abs_2*dist_2;
-
         root = order_d;
     }
-
     total += (Reg_1[root] < Reg_2[root])?Reg_1[root]:Reg_2[root];
     //cout<<"total:"<<total<<endl;
     //total2 += abs(Reg_1[root]-Reg_2[root]);

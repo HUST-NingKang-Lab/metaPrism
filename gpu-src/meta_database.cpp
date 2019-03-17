@@ -298,7 +298,7 @@ void * Meta_Database::Parallel_Query_Static_RAM(void * args){
      //double thread_comparison_time= ((Argument *)args)->comparison_time;
 
      float * Abd_1=new float[LeafN];
-     Load_abd(infilename.c_str(),Id,Abd_1);
+     Load_abd_v(infilename.c_str(),Id,Abd_1);
      double thread_comparison_time=0;
 
 
@@ -364,7 +364,7 @@ void * Meta_Database::Parallel_Query_Static_RAM(void * args){
      //double thread_comparison_time= ((Argument *)args)->comparison_time;
 
      float * Abd_1=new float[LeafN];
-     Load_abd(infilename.c_str(),Id,Abd_1);
+     Load_abd_v(infilename.c_str(),Id,Abd_1);
      double thread_comparison_time=0;
 
 
@@ -629,7 +629,7 @@ unsigned int Meta_Database::GPU_Parallel_Query_RAM(string infilename, basic_entr
                   
                   abd1[0].name=infilename;
                   float t_abd[LeafN];
-                  Load_abd(infilename.c_str(),Id,t_abd);
+                  Load_abd_v(infilename.c_str(),Id,t_abd);
 
                   memcpy(abd1->data,t_abd,sizeof(float)*LeafN);
               
