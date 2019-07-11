@@ -2,34 +2,17 @@
 #include <iostream>
 #include <pthread.h>
 #include <time.h>
+#include <sys/time.h>
 
 #include "meta_database.h"
+
+
+
 using namespace std;
+
 //const double threshold =0.4;
-const double newthreshold=0.15;
+const double newthreshold=0.001;
 
-void display_database(map<string,float *>  temp_entry){
-  cout<<"begin to display_database"<<endl;
-  map<string,float *> ::iterator map_iter;
-  for(map_iter=temp_entry.begin();map_iter!=temp_entry.end();map_iter++){
-    cout<<map_iter->first<<endl;
-    float * abd=map_iter->second;
-    /*for(int i=0;i<LeafN;i++)
-        {
-          cout<<abd[i]<<"\t"<<i<<endl;
-        }
-    */
-    for(int i=0;i< LeafN;i++)
-    {
-        if(abd[i]!=0)
-          cout<<abd[i]<<endl;
-          //continue;
-    }
-    //cout<<endl;
-  }
-  cout<<"end of display"<<endl;
-
-}
 
 
 
@@ -337,6 +320,8 @@ void * Meta_Database::Parallel_Query_Static_RAM(void * args){
 */
 
 
+
+
 void * Meta_Database::Parallel_Query_Static_RAM(void * args){
 
   string infilename = ((Argument *)args)->infilename;
@@ -360,6 +345,12 @@ void * Meta_Database::Parallel_Query_Static_RAM(void * args){
      Load_abd(infilename.c_str(),Id,Abd_1);
      double thread_comparison_time=0;
 
+
+
+
+
+
+     
 
      if(flag==0){
 
@@ -451,7 +442,21 @@ void * Meta_Database::Parallel_Query_Static(void * args){
      int after_filter_count=((Argument *)args)->after_filter_count;
      string filter_flag = ((Argument *)args)->filterflag;
      float * Abd_1 = new float[LeafN];
+    
+    
+     double pair_loading_time,pair_comparison_time;
+     struct timeval loading_begin,loading_end;
+
+
+
+
+     gettimeofday(&loading_begin,NULL);
      float shannon_1=Load_abd(infilename.c_str(),Id,Abd_1);
+
+     gettimeofday(&loading_end,NULL);
+     
+
+     //cout<<"loading_time:"<<loading_time<<endl;
 
 
 
@@ -476,8 +481,12 @@ void * Meta_Database::Parallel_Query_Static(void * args){
                                                 //startTime=clock();
                                                //Comp_sam(infilename.c_str(), entry_filename.c_str(),buffer[sam_file].m_value,buffer[sam_file].n_value);
                                                // to be delete
+                                               //Comp_sam(Abd_1, entry_filename.c_str(),buffer[sam_file].m_value,buffer[sam_file].n_value);
                                                Comp_sam(Abd_1, entry_filename.c_str(),buffer[sam_file].m_value,buffer[sam_file].n_value);
-                                               //buffer[sam_file].b_entry=list[sam_file]; 
+                                               
+                                               
+                                               //cout<<"loading_time:"<<loading_time<<endl;
+                                               buffer[sam_file].b_entry=list[sam_file]; 
                                                after_filter_count++;
                                                //endTime=clock();
                                                //cout<<"F: "<<double(endTime- startTime) / CLOCKS_PER_SEC <<" s"<<endl;
@@ -518,7 +527,7 @@ void * Meta_Database::Parallel_Query_Static(void * args){
                                                                                               
                                                }
                                                  ((Argument *)args)->count=count;
-                                                 ((Argument *)args)->after_filter_count=after_filter_count;
+                                                 
                                                  //endTime=clock();
                                                  //cout<<double(endTime- startTime) / CLOCKS_PER_SEC <<" s"<<endl;
                                                  //cout<<"after_filter_count:"<<after_filter_count<<endl;                                              
@@ -540,8 +549,9 @@ void * Meta_Database::Parallel_Query_Static(void * args){
 
                                                if(filter_flag=="F"){
                                                Comp_sam(Abd_1, entry_filename.c_str(),buffer[sam_file].m_value,buffer[sam_file].n_value);
-                                               buffer[sam_file].b_entry=list[sam_file];
+                                               
                                                //cout<<buffer[sam_file].m_value<<"\t"<<buffer[sam_file].n_value<<endl;
+                                               buffer[sam_file].b_entry=list[sam_file]; 
 
                                                after_filter_count++;
                                                 }
@@ -569,6 +579,8 @@ void * Meta_Database::Parallel_Query_Static(void * args){
 
                                                 ((Argument *)args)->count=count;
                                                 ((Argument *)args)->after_filter_count=after_filter_count;
+                                                
+                                                
                                                  //cout<<"after_filter_count:"<<after_filter_count<<endl;    
                                            pthread_exit(0);
                                          }
@@ -576,6 +588,8 @@ void * Meta_Database::Parallel_Query_Static(void * args){
 
      
      }
+
+
 
 
 unsigned int Meta_Database::Parallel_Query_RAM(string infilename, Index_Entry ** list, map<string,float* > &database_map,Meta_Result * results,int n, int t_number, int count,int group,string scoringtype,string filterflag,double &comparison_time){
@@ -605,7 +619,8 @@ unsigned int Meta_Database::Parallel_Query_RAM(string infilename, Index_Entry **
                   //cout<<"fine1"<<endl;
                   //cout<<"input into threads"<<endl;
                   //display_database(database_map);
-
+                  
+                  
                   for (int i = 0; i< t_number; i++){//Loop each thread        
                                            //cout<< "Process " << i << " starts" << endl;
                                            
@@ -629,7 +644,7 @@ unsigned int Meta_Database::Parallel_Query_RAM(string infilename, Index_Entry **
                                            }
 
 
-          
+           
                   
                   for (int i = 0; i < t_number; i++){
                           pthread_join(t[i], NULL); 
@@ -646,10 +661,11 @@ unsigned int Meta_Database::Parallel_Query_RAM(string infilename, Index_Entry **
                     cout<<buffer[i].b_entry->getfilename()<<endl;
                     cout<<buffer[i].m_value<<endl;
                   }*/
-		  double SortTime=0;
-                  struct timeval sort_begin,sort_end;
-                  gettimeofday(&sort_begin,NULL);
+                  
+                  
+                  
 
+                if(scoringtype=="F"){
                   for (int i = 0; i < count; i++){
                           //cout<<"buffer[i].m_value"<<buffer[i].m_value<<endl;
                       if (buffer[i].m_value > results[n-1].m_value){
@@ -661,11 +677,27 @@ unsigned int Meta_Database::Parallel_Query_RAM(string infilename, Index_Entry **
                                                              results[j-1] = temp;                                                             
                                                              }
                                           else break;                                                                              
-                                       }
-				}
-		  gettimeofday(&sort_end,NULL);
-                  SortTime=double(sort_end.tv_sec-sort_begin.tv_sec)*1000000+double(sort_end.tv_usec-sort_begin.tv_usec);
-                  cout<<"The sort step costs:"<<SortTime<<"s"<<endl;
+                                       }}
+                                    }
+                else{
+                  for (int i = 0; i < count; i++){
+                          //cout<<"buffer[i].m_value"<<buffer[i].m_value<<endl;
+                      if (buffer[i].n_value > results[n-1].n_value){
+                                      results[n-1] =  buffer[i];
+                                      for (int j = n-1; j>0; j--)
+                                          if (results[j].n_value > results[j-1].n_value){
+                                                             Meta_Result temp = results[j];
+                                                             results[j] = results[j-1];
+                                                             results[j-1] = temp;                                                             
+                                                             }
+                                          else break;                                                                              
+                                       }}
+
+
+
+                }
+                 
+                  
 
                 
                   if (n < count) return n;
@@ -702,6 +734,10 @@ unsigned int Meta_Database::Parallel_Query_RAM(string infilename, basic_entry **
                   //cout<<"fine1"<<endl;
                   //cout<<"input into threads"<<endl;
                   //display_database(database_map);
+                  
+                  
+
+                  //cout<<"index_time:"<<index_time<<endl;
 
                   for (int i = 0; i< t_number; i++){//Loop each thread        
                                            //cout<< "Process " << i << " starts" << endl;
@@ -719,6 +755,7 @@ unsigned int Meta_Database::Parallel_Query_RAM(string infilename, basic_entry **
                                            args[i].database_map=database_map;
                                            args[i].comparison_time=0;
 
+
                                            //args[i].tree_file = &Tree_file;
                                            pthread_create(&(t[i]),NULL, Parallel_Query_Static_RAM, &(args[i]));
                                           
@@ -732,6 +769,7 @@ unsigned int Meta_Database::Parallel_Query_RAM(string infilename, basic_entry **
                           after_filter_count=after_filter_count+args[i].after_filter_count;
                           comparison_time=comparison_time+args[i].comparison_time;
 
+
                         }
 
 
@@ -742,9 +780,11 @@ unsigned int Meta_Database::Parallel_Query_RAM(string infilename, basic_entry **
                     cout<<buffer[i].b_entry->getfilename()<<endl;
                     cout<<buffer[i].m_value<<endl;
                   }*/
-		  double SortTime=0;
-		  struct timeval sort_begin,sort_end;
-		  gettimeofday(&sort_begin,NULL);
+
+                  struct timeval sorting_begin,sorting_end;
+                  gettimeofday(&sorting_begin,NULL);
+                  
+                if(scoringtype=="F"){
                   for (int i = 0; i < count; i++){
                           //cout<<"buffer[i].m_value"<<buffer[i].m_value<<endl;
                       if (buffer[i].m_value > results[n-1].m_value){
@@ -757,10 +797,27 @@ unsigned int Meta_Database::Parallel_Query_RAM(string infilename, basic_entry **
                                                              }
                                           else break;                                                                              
                                        }}
+                                    }
+                else{
+                  for (int i = 0; i < count; i++){
+                          //cout<<"buffer[i].m_value"<<buffer[i].m_value<<endl;
+                      if (buffer[i].n_value > results[n-1].n_value){
+                                      results[n-1] =  buffer[i];
+                                      for (int j = n-1; j>0; j--)
+                                          if (results[j].n_value > results[j-1].n_value){
+                                                             Meta_Result temp = results[j];
+                                                             results[j] = results[j-1];
+                                                             results[j-1] = temp;                                                             
+                                                             }
+                                          else break;                                                                              
+                                       }}
 
-                  gettimeofday(&sort_end,NULL);
-		  SortTime=double(sort_end.tv_sec-sort_begin.tv_sec)*1000000+double(sort_end.tv_usec-sort_begin.tv_usec);
-		  cout<<"The sort step costs:"<<SortTime<<"s"<<endl;
+  
+
+                }
+                  gettimeofday(&sorting_end,NULL);
+                 
+                  //cout<<"sorting_time:"<<sorting_time<<endl;
                   if (n < count) return n;
                   else return count;                     
          
@@ -794,6 +851,8 @@ unsigned int Meta_Database::Parallel_Query(string infilename, Index_Entry * * li
                   pthread_t t[t_number];
                   //cout<<"fine1"<<endl;
 
+                 
+                  
                   for (int i = 0; i< t_number; i++){//Loop each thread        
                                            //cout<< "Process " << i << " starts" << endl;
                                            
@@ -808,6 +867,10 @@ unsigned int Meta_Database::Parallel_Query(string infilename, Index_Entry * * li
                                            args[i].filterflag=filterflag;
                                            //args[i].tree_file = &Tree_file;
                                           //cout<<"fine2"<<endl;
+                                           args[i].loading_time=loading_time;
+                                           args[i].pairwise_comparison_time=pairwise_comparison_time;
+                                           //args[i].loading_begin=loading_begin;
+                                           //args[i].loading_end=loading_end;
                                            pthread_create(&(t[i]),NULL, Parallel_Query_Static,&(args[i]));
                                           
                                            //cout<<"fine3"<<endl;
@@ -819,7 +882,8 @@ unsigned int Meta_Database::Parallel_Query(string infilename, Index_Entry * * li
                   for (int i = 0; i < t_number; i++){
                           pthread_join(t[i], NULL); 
                           after_filter_count=after_filter_count+args[i].after_filter_count;
-
+                          loading_time=loading_time+args[i].loading_time;
+                          pairwise_comparison_time=pairwise_comparison_time+args[i].pairwise_comparison_time;
                         }
 
 
@@ -832,7 +896,10 @@ unsigned int Meta_Database::Parallel_Query(string infilename, Index_Entry * * li
                   }*/
 
 
-
+                
+                struct timeval sorting_begin,sorting_end;
+                gettimeofday(&sorting_begin,NULL);
+                gettimeofday(&out_begin,NULL);
                 if(scoringtype=="F"){
 
                   for (int i = 0; i < count; i++){
@@ -866,8 +933,8 @@ unsigned int Meta_Database::Parallel_Query(string infilename, Index_Entry * * li
                 }
 
 
-
-
+                gettimeofday(&sorting_end,NULL);
+                sorting_time=double(sorting_end.tv_sec-sorting_begin.tv_sec)*1000000+double(sorting_end.tv_usec-sorting_begin.tv_usec);
 
                   
                   if (n < count) return n;
@@ -882,6 +949,7 @@ unsigned int Meta_Database::Parallel_Query(string infilename, Index_Entry * * li
 unsigned int Meta_Database::Parallel_Query(string infilename, basic_entry * * list, Meta_Result * results, int n, int t_number, int count, string scoringtype, string filterflag){
                                         
                   t_number = (t_number < count)? t_number : count;
+
                   
                               
                   if (t_number == 0 || t_number > sysconf(_SC_NPROCESSORS_CONF))
@@ -903,7 +971,9 @@ unsigned int Meta_Database::Parallel_Query(string infilename, basic_entry * * li
                   
                   Argument args[t_number];
                   pthread_t t[t_number];
-                  //cout<<"fine2"<<endl;                                     
+                  //cout<<"fine2"<<endl;
+                  gettimeofday(&index_end,NULL);
+                  index_time=double(index_end.tv_sec-index_begin.tv_sec)*1000000+double(index_end.tv_usec-index_begin.tv_usec);                                  
                   for (int i = 0; i< t_number; i++){//Loop each thread        
                                            //cout<< "Process " << i << " starts" << endl;
                                            
@@ -917,7 +987,9 @@ unsigned int Meta_Database::Parallel_Query(string infilename, basic_entry * * li
                                            args[i].flag=1;
                                            args[i].filterflag=filterflag;
                                            //args[i].tree_file = &Tree_file;
-                                            
+                                           args[i].loading_time=loading_time;
+                                           //args[i].loading_begin=loading_begin;
+                                           //args[i].loading_end=loading_end;
                                            pthread_create(&(t[i]),NULL, Parallel_Query_Static,&(args[i]));
 
                                            }
@@ -925,13 +997,17 @@ unsigned int Meta_Database::Parallel_Query(string infilename, basic_entry * * li
                   for (int i = 0; i < t_number; i++){
                            pthread_join(t[i], NULL); 
                            after_filter_count=after_filter_count+args[i].after_filter_count;
+                           loading_time=loading_time+args[i].loading_time;
                   }
 
                   //cout<<"count:"<<count<<endl;
                   //cout<<"after_filter_count:"<<after_filter_count<<endl;
 
 
-                  
+                
+                struct timeval sorting_begin,sorting_end;
+                gettimeofday(&sorting_begin,NULL);
+                gettimeofday(&out_begin,NULL);
                 if(scoringtype=="F"){
 
                   for (int i = 0; i < count; i++){
@@ -939,6 +1015,7 @@ unsigned int Meta_Database::Parallel_Query(string infilename, basic_entry * * li
                                       results[n-1] =  buffer[i];
                                       for (int j = n-1; j>0; j--)
                                           if (results[j].m_value > results[j-1].m_value){
+                                                             //cout<<results[j-1].m_value<<endl;
                                                              Meta_Result temp = results[j];
                                                              results[j] = results[j-1];
                                                              results[j-1] = temp;                                                             
@@ -966,7 +1043,8 @@ unsigned int Meta_Database::Parallel_Query(string infilename, basic_entry * * li
                  //cout<<"N:"<<n<<endl;
                  //cout<<"COUNT"<<count<<endl;
 
-                  
+                  gettimeofday(&sorting_end,NULL);
+                  sorting_time=double(sorting_end.tv_sec-sorting_begin.tv_sec)*1000000+double(sorting_end.tv_usec-sorting_begin.tv_usec);
                   if (n < count) return n;
                   else return count;                     
          
@@ -1007,6 +1085,8 @@ unsigned int Meta_Database::Parallel_Indexed_Query(ostream & out, string infilen
                         
                         float weight[this->Key_dim];
 
+                        gettimeofday(&index_begin,NULL);
+
                         vector<string> key_set;
                         vector<int> key_count;
                         Get_Key_Weight(infilename.c_str(), keys, weight, this->Key_dim);
@@ -1092,17 +1172,28 @@ unsigned int Meta_Database::Parallel_Indexed_Query(ostream & out, string infilen
                                               {flag = 0;}
                                           else
                                           {
-                  
-                                            flag = decide_to_clust(Meta_index[key_set[0]],Meta_biomes[biotype]);
+                                            if(Meta_index.find(key_set[0])!=Meta_index.end())
+                    
+                                                flag = decide_to_clust(Meta_index[key_set[0]],Meta_biomes[biotype]);
+                                            else{
+                                                //cout<<"no index1 hits"<<endl;
+                                                flag=1;
+                                                }
                                           }
                                   
                                       
                                           if(flag == 1){
-                                            vector <basic_entry *> merge_res = real_merge_index_cluster(*(Meta_index[key_set[0]]),*(Meta_biomes[biotype]));
-                                  
+                                            vector <basic_entry *> merge_res;
+                                            if(Meta_index.find(key_set[0])!=Meta_index.end()) 
+                                              merge_res = real_merge_index_cluster(*(Meta_index[key_set[0]]),*(Meta_biomes[biotype]));
+                                            else if(Meta_biomes.find(biotype)!=Meta_biomes.end()){
+                                              vector<Index_Entry * >  fake_index;
+                                              merge_res=real_merge_index_cluster(fake_index,*(Meta_biomes[biotype]));
+                                            }
+
                                             for(int i=1;i<length;i++){
                                               if(Meta_index.count(key_set[i])!=0){
-                                              merge_res=real_merge_index_cluster(*(Meta_index[key_set[i]]),merge_res);
+                                                merge_res=real_merge_index_cluster(*(Meta_index[key_set[i]]),merge_res);
                                               }
                                               else
                                                   continue;
@@ -1143,7 +1234,7 @@ unsigned int Meta_Database::Parallel_Indexed_Query(ostream & out, string infilen
                       
                         if (n_count == 0){
                                                             
-                                          out << "#Meta-Storms" << endl;
+                                          out << "#Meta-Prism" << endl;
                                           out << "#Not hits" << endl;
                             
                                           return 0; 
@@ -1153,13 +1244,19 @@ unsigned int Meta_Database::Parallel_Indexed_Query(ostream & out, string infilen
                         //cout<<"n:" <<n<<"\t"<<"n_count:"<<n_count<<"\t"<<"result_size:"<<sizeof(results)/sizeof(results[0])<<endl;  
                         
                         for (int i = 0; i < n; i++){
+
+                           //cout<<"index_time"<<index_time<<endl;
+                           //cout<<"sorting_time"<<index_time<<endl;
                            
-                           out << "#Meta-Storm" << endl;
+                           out << "#Meta-Prism" << endl;
                            out << "Match " << i+1 << endl;
-                           out << "Similarity: " << results[i].m_value << "%" << endl;
-                           out << "New-Score: " << results[i].n_value << "%" << endl;
+                           if(scoringtype=="F")
+                            out << "Similarity: " << results[i].m_value << "%" << endl;
+                           else
+                            out << "Similarity: " << results[i].n_value << "%" << endl;
                            //out << "Sample Group: " << results[i].b_entry->Get_group() << endl;
-                           out << "Sample path: " << results[i].b_entry->getfilename() << endl;                           
+                           out << "Sample path: " << results[i].b_entry->getfilename() << endl;
+
                            
                            }
                            cout<<endl;
@@ -1174,6 +1271,7 @@ unsigned int Meta_Database::Parallel_Indexed_Query(ostream & out, string infilen
 unsigned int Meta_Database::Parallel_Exhaustive_Query(ostream & out, string infilename, int n, int t_number, int group, string scoringtype, string filterflag){
                   
                   unsigned int count = 0;
+                  gettimeofday(&index_begin,NULL);
 
 
                   
@@ -1183,7 +1281,7 @@ unsigned int Meta_Database::Parallel_Exhaustive_Query(ostream & out, string infi
 
                   if (count == 0) {
                             
-                            out << "#Meta-Storms" << endl;
+                            out << "#Meta-Prism" << endl;
                             out << "#Not hits" << endl;
                             
                             return 0; 
@@ -1200,10 +1298,12 @@ unsigned int Meta_Database::Parallel_Exhaustive_Query(ostream & out, string infi
                   //cout<<"current n:"<<n<<endl;
                   for (int i = 0; i < n; i++){
                            
-                           out << "#Meta-Storm" << endl;
+                           out << "#Meta-Prism" << endl;
                            out << "Match " << i+1 << endl;
-                           out << "Similarity: " << results[i].m_value << "%" << endl;
-                           out << "New-Score: " << results[i].n_value<<"%"<<endl;
+                           if(scoringtype=="F")
+                            out << "Similarity: " << results[i].m_value << "%" << endl;
+                           else
+                            out << "Similarity: " << results[i].n_value << "%" << endl;
                            //out << "Sample Group: " << results[i].entry->Get_group() << endl;
                            out << "Sample path: " << results[i].b_entry->getfilename() << endl;                           
                            
@@ -1220,9 +1320,11 @@ unsigned int Meta_Database::Parallel_Exhaustive_Query(ostream & out, string infi
 
 
 
-unsigned int Meta_Database::Parallel_Exhaustive_Query_RAM(ostream & out, string infilename, vector<string> &databaselist, map<string,float *> &database_map, int n, int t_number, int group){
+unsigned int Meta_Database::Parallel_Exhaustive_Query_RAM(ostream & out, string infilename, vector<string> &databaselist, map<string,float *> &database_map, int n, int t_number, int group,string scoringtype){
                   
                   clock_t startTime,endTime;
+                  struct timeval tv_begin,tv_end;
+                  gettimeofday(&tv_begin,NULL);
                   startTime=clock();
 
                   unsigned int count = 0;
@@ -1236,7 +1338,7 @@ unsigned int Meta_Database::Parallel_Exhaustive_Query_RAM(ostream & out, string 
 
                   if (count == 0) {
                             
-                            out << "#Meta-Storms" << endl;
+                            out << "#Meta-Prism" << endl;
                             out << "#Not hits" << endl;
                             
                             return 0; 
@@ -1248,22 +1350,35 @@ unsigned int Meta_Database::Parallel_Exhaustive_Query_RAM(ostream & out, string 
                   
                   Meta_Result results[n];
 
+                 
+                   n = this->Parallel_Query_RAM(infilename, list, database_map,results, n, t_number,count,group,"F","F", comparison_time);
+                  
 
-                  n = this->Parallel_Query_RAM(infilename, list, database_map,results, n, t_number,count,group,"F","F", comparison_time);
-
+                  
                   endTime=clock();
 
-                  cout<<"Query entry:"<<infilename<<"\t";
+                  gettimeofday(&tv_end,NULL);
+                  double time_use=double(tv_end.tv_sec-tv_begin.tv_sec)*1000000+double(tv_end.tv_usec-tv_begin.tv_usec);
 
-                  cout<<double(endTime-startTime)  / CLOCKS_PER_SEC <<"\t"<<comparison_time  / CLOCKS_PER_SEC <<endl;
+
+                  
+                  //cout<<"Query entry:"<<infilename<<"\t";
+                  //cout<<time_use<<" us"<<endl;
+                  //this->output_time();
+
+
+
+                  //cout<<double(endTime-startTime)  / CLOCKS_PER_SEC <<"\t"<<comparison_time  / CLOCKS_PER_SEC <<endl;
                   
                   //cout<<"current n:"<<n<<endl;
                   for (int i = 0; i < n; i++){
                            
-                           out << "#Meta-Storm" << endl;
+                           out << "#Meta-Prism" << endl;
                            out << "Match " << i+1 << endl;
-                           out << "Similarity: " << results[i].m_value << "%" << endl;
-                           out << "New-Score: " << results[i].n_value<<"%"<<endl;
+                           if(scoringtype=="F")
+                            out << "Similarity: " << results[i].m_value << "%" << endl;
+                           else
+                            out << "Similarity: " << results[i].n_value << "%" << endl;
                            //out << "Sample Group: " << results[i].entry->Get_group() << endl;
                            out << "Sample path: " << results[i].b_entry->getfilename() << endl;                           
                            
@@ -1276,7 +1391,7 @@ unsigned int Meta_Database::Parallel_Exhaustive_Query_RAM(ostream & out, string 
 
  unsigned int Meta_Database::Parallel_Indexed_Query_RAM(string infilename, string query_key, string biotype, map<string,float* > &database_map, Meta_Result * results, int n, int t_number, int group, string scoringtype, string filterflag,double &comparison_time){
 
-                  unsigned int count = 0;                                 
+                  unsigned int count = 0;
                   
                   if (this->Meta_index.count(query_key) == 0) return 0;
                 
@@ -1301,6 +1416,8 @@ unsigned int Meta_Database::Parallel_Indexed_Query_RAM(ostream & out, string inf
                         
                         float weight[this->Key_dim];
 
+                        gettimeofday(&index_begin,NULL);
+
                         vector<string> key_set;
                         vector<int> key_count;
                         double comparison_time=0;
@@ -1311,7 +1428,7 @@ unsigned int Meta_Database::Parallel_Indexed_Query_RAM(ostream & out, string inf
                                      
                         int n_count = 0;
                         
-                   
+
                         for (int i = this->Key_dim; i>0; i--)
                             if (weight[i-1] >= q_min){
                                           
@@ -1381,6 +1498,7 @@ unsigned int Meta_Database::Parallel_Indexed_Query_RAM(ostream & out, string inf
                                                   key_set[j]=key_set[k];
                                                   key_set[k]=tempkey;
                                                  }
+                                          //cout<<"after get key"<<endl;
 
 
                                           int flag =0;
@@ -1389,22 +1507,31 @@ unsigned int Meta_Database::Parallel_Indexed_Query_RAM(ostream & out, string inf
                                           else
                                           {
                   
-                                            flag = decide_to_clust(Meta_index[key_set[0]],Meta_biomes[biotype]);
+                                            //cout<<key_set[0]<<endl;
+                                            if(Meta_index.find(key_set[0])!=Meta_index.end())
+                                              flag = decide_to_clust(Meta_index[key_set[0]],Meta_biomes[biotype]);
+                                            else
+                                              flag=1;
                                           }
                                   
-                                      
+                                          //cout<<"after deciding"<<endl;
+
                                           if(flag == 1){
-                                            vector <basic_entry *> merge_res = real_merge_index_cluster(*(Meta_index[key_set[0]]),*(Meta_biomes[biotype]));
-                                  
+                                            vector <basic_entry *> merge_res;
+                                            if(Meta_index.find(key_set[0])!=Meta_index.end()) 
+                                              merge_res = real_merge_index_cluster(*(Meta_index[key_set[0]]),*(Meta_biomes[biotype]));
+                                            else if(Meta_biomes.find(biotype)!=Meta_biomes.end()){
+                                              vector<Index_Entry * >  fake_index;
+                                              merge_res=real_merge_index_cluster(fake_index,*(Meta_biomes[biotype]));
+                                            }
+
                                             for(int i=1;i<length;i++){
                                               if(Meta_index.count(key_set[i])!=0){
-                                              merge_res=real_merge_index_cluster(*(Meta_index[key_set[i]]),merge_res);
+                                                merge_res=real_merge_index_cluster(*(Meta_index[key_set[i]]),merge_res);
                                               }
                                               else
                                                   continue;
-                                
-
-
+                          
                                             }
 
                                              unsigned int count=merge_res.size();
@@ -1414,8 +1541,10 @@ unsigned int Meta_Database::Parallel_Indexed_Query_RAM(ostream & out, string inf
                   
                                              count = this->Get_Entry_List(list, merge_res , group);
 
-                                             n_count = this->Parallel_Query_RAM(infilename, list,database_map ,results, n, t_number, count,group,scoringtype, filterflag,comparison_time);
-                                                                                      
+                                             //n_count = this->Parallel_Query_RAM(infilename, list,database_map ,results, n, t_number, count,group,scoringtype, filterflag,comparison_time);
+
+                                              n_count = this->Parallel_Query_RAM(infilename, list, database_map,results, n, t_number,count,group,scoringtype,filterflag, comparison_time);
+                                  
 
                                           }
                                           else{     
@@ -1429,24 +1558,31 @@ unsigned int Meta_Database::Parallel_Indexed_Query_RAM(ostream & out, string inf
                       
                         if (n_count == 0){
                                                             
-                                          out << "#Meta-Storms" << endl;
+                                          out << "#Meta-Prism" << endl;
                                           out << "#Not hits" << endl;
                             
                                           return 0; 
                                          }
                         //cout<<"n:" <<n<<"\t"<<"n_count:"<<n_count<<endl;                                                 
                         n = (n < n_count) ? n : n_count;
-                        cout<<"Query entry:"<<infilename<<'\t'<<comparison_time / float(1000000)<<"s"<<endl;
+
+
+                        cout<<"Query entry:"<<infilename<<'\t'<<comparison_time / double(1000000)<<"s"<<endl;
+                        //cout<<"Query entry:"<<infilename<<'\t'<<comparison_time <<" μs"<<endl;
+                        
                         //cout<<"n:" <<n<<"\t"<<"n_count:"<<n_count<<"\t"<<"result_size:"<<sizeof(results)/sizeof(results[0])<<endl;  
                         
                         for (int i = 0; i < n; i++){
                            
-                           out << "#Meta-Storm" << endl;
+                           out << "#Meta-Prism" << endl;
                            out << "Match " << i+1 << endl;
-                           out << "Similarity: " << results[i].m_value << "%" << endl;
-                           out << "New-Score: " << results[i].n_value << "%" << endl;
+                           if(scoringtype=="F")
+                            out << "Similarity: " << results[i].m_value << "%" << endl;
+                           else
+                            out << "Similarity: " << results[i].n_value << "%" << endl;
                            //out << "Sample Group: " << results[i].b_entry->Get_group() << endl;
-                           out << "Sample path: " << results[i].b_entry->getfilename() << endl;                           
+                           out << "Sample path: " << results[i].b_entry->getfilename() << endl;
+                                              
                            
                            }
                            //cout<<endl;
@@ -1528,6 +1664,7 @@ int Meta_Database::Out_Index(string outfilename){
         out_biometable << (*viter)->getid()  << "\t" <<(*viter)->Get_group()<<"\t"<<(*viter)->getfilename() <<"\t"<< (*viter)->getbiomes()<<endl;
 
       }
+      out_biomeindex<<endl;
       out_biometable<<endl;
       biter++;
     }
@@ -1923,7 +2060,7 @@ int Meta_Database::decide_to_clust(vector<Index_Entry *>* entry, vector<biomes_e
   //cout<<endl;
   if(fir_fraction < newthreshold)
       return 1;
-  else if(m_length < 10 || sec_fraction > 0.6)
+  else if(sec_fraction > 0.6)
       return 1;
   else
     return 0;

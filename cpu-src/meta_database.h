@@ -12,6 +12,7 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/mman.h>
+#include <sys/time.h>
 
 
 #include <stdlib.h>
@@ -21,6 +22,8 @@
 //#include "tree_class.h"
 #include "cfn.h"
 #include "comp.h"
+//#include "gpu_compare16.cu"
+//#include "gpu_compare1.0.cu"
 
 #ifndef META_DATABASE_H
 #define META_DATABASE_H
@@ -111,17 +114,27 @@ class Meta_Database{
       Meta_Database(string infilename,string biotype){
                            this->Entry_count = 0;
                            this->Entry_number = 0;
-                           this->Abundance = 0;    
+                           this->Abundance = 0;
                            this->Load_Index(infilename,biotype);
+                           this->loading_time=0;
+                           this->pairwise_comparison_time=0;
+
+                           //this->result_score=new float [this->Entry_count+ 3000];
+
+
+
+
                            //this->display_t_table(Meta_index);
                            //this->display_b_table(Meta_biomes);
                            //cout<<"taxon size:"<<Meta_index.size()<<endl;
                            //cout<<"biome size:"<<Meta_biomes.size()<<endl;
                            //Comp_init();   
                            }
-                           
+                
 
       ~Meta_Database(){};
+
+
       
       void Insert_Index_by_Entry(Index_Entry * entry);
       void Insert_Group_by_Entry(Index_Entry * entry);
@@ -154,12 +167,17 @@ class Meta_Database{
       int decide_to_clust(vector<Index_Entry *>* entry, vector<biomes_entry* >* b_entry);
 
       //RAM version
-      unsigned int Parallel_Exhaustive_Query_RAM(ostream & out, string infilename, vector<string> &databaselist, map<string,float *> &database_map, int n, int t_number, int group);
+      unsigned int Parallel_Exhaustive_Query_RAM(ostream & out, string infilename, vector<string> &databaselist, map<string,float *> &database_map, int n, int t_number, int group,string scoringtype);
+
       unsigned int Parallel_Indexed_Query_RAM(ostream & out, string infilename,string biotype, vector<string> &databaselist, map<string,float *> &database_map, int n, int t_number,int group,string scoringtype, string filterflag);
       unsigned int Parallel_Indexed_Query_RAM(string infilename, string query_key, string biotype, map<string,float* > &database_map, Meta_Result * results, int n, int t_number, int group, string scoringtype, string filterflag,double &comparison_time);
 
 
-
+      //calc time
+       struct timeval index_begin,index_end;
+       struct timeval loading_begin,loading_end;
+       struct timeval out_begin,out_end;
+       double index_time,loading_time,sorting_time,pairwise_comparison_time;
 
 
     private:
@@ -173,6 +191,17 @@ class Meta_Database{
               unsigned int Entry_number; //ID
               unsigned int Key_dim;      
               int Abundance;
+              
+              //for gpu compare
+              
+              float * result_score;
+
+
+              
+
+
+              
+
               //string Path;                            
               static int match_count;
 
@@ -210,10 +239,11 @@ class Meta_Database{
               static void * Parallel_Query_Static_RAM(void * args);
               unsigned int Parallel_Query_RAM(string infilename, Index_Entry ** list, map<string,float* > &database_map,Meta_Result * results,int n, int t_number, int count,int group,string scoringtype,string filterflag,double &comparison_time);
               unsigned int Parallel_Query_RAM(string infilename, basic_entry ** list, map<string,float* > &database_map,Meta_Result * results,int n, int t_number, int count,int group,string scoringtype, string filterflag,double &comparison_time);
-              
+
+   
               
                     };//end Meta_Database
-              
+
 
 struct Argument{
        
@@ -232,6 +262,10 @@ struct Argument{
        int flag;
        double comparison_time;
        Meta_Result * buffer;
+
+       double loading_time;
+       double pairwise_comparison_time;
+       //struct time_val loading_begin,loading_end;
 
        };
 

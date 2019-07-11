@@ -248,9 +248,9 @@ int parallel_load_database(string indexname,map<string, float *> &database_map,v
 
     endTime=clock();
     gettimeofday(&tv_end,NULL);
-    cout<<"This load_database step costs "<<double(endTime- startTime) / CLOCKS_PER_SEC <<" s"<<endl;
+    //cout<<"This load_database step costs "<<double(endTime- startTime) / CLOCKS_PER_SEC <<" s"<<endl;
     double time_use=double(tv_end.tv_sec-tv_begin.tv_sec)*1000000+double(tv_end.tv_usec-tv_begin.tv_usec);
-    cout<<"This load_database step costs "<<time_use<<" μs"<<endl;
+    cout<<"This load_database step costs "<<time_use/1000000<<" s"<<endl;
 
     return count;
 
@@ -342,7 +342,7 @@ int multi_query(string outpath,string filelist,string indexname,int n, int t, in
               exit(0);
                   }
        if(is_index==0){    
-              database.Parallel_Exhaustive_Query_RAM(out, *(input_iter),databaselist,database_map,n,t,group);
+              database.Parallel_Exhaustive_Query_RAM(out, *(input_iter),databaselist,database_map,n,t,group,scroingtype);
               
               }
 
@@ -362,7 +362,7 @@ int multi_query(string outpath,string filelist,string indexname,int n, int t, in
     else{
 
       if(is_index==0){
-      database.Parallel_Exhaustive_Query_RAM(cout, *(input_iter),databaselist,database_map,n,t,group);
+      database.Parallel_Exhaustive_Query_RAM(cout, *(input_iter),databaselist,database_map,n,t,group,scroingtype);
     }
 
       else{
@@ -420,7 +420,7 @@ int main(int argc, char * argv[]){
                             case 'b': biotype = argv[i+1];break;
                             case 's': scroingtype=argv[i+1];break;
                             case 'f': filterflag=argv[i+1];break;
-                            case 'l': mode=1;filelist=argv[i+1];break;
+                            case 'l': mode=1;filelist=argv[i+1];break; 
                             default : printf("Unrec argument %s\n", argv[i]); printhelp(); break; 
                             }
          i+=2;
@@ -462,7 +462,7 @@ int main(int argc, char * argv[]){
     gettimeofday(&tv_end,NULL);
     double time_use=double(tv_end.tv_sec-tv_begin.tv_sec)*1000000+double(tv_end.tv_usec-tv_begin.tv_usec);
     cout<<"This query step costs: "<<double(endTime- startTime) / CLOCKS_PER_SEC <<"s"<<endl;
-    cout<<"This query step costs: "<<time_use / 1000000 <<" s"<<endl;
+    //cout<<"This query step costs: "<<time_use / 1000000 <<" s"<<endl;
 
          
     }
@@ -478,7 +478,7 @@ int main(int argc, char * argv[]){
           double time_use=double(tv_end.tv_sec-tv_begin.tv_sec)*1000000+double(tv_end.tv_usec-tv_begin.tv_usec);
  
           cout<<"This query step costs: "<<time_use / 1000000<<" s"<<endl;
-          cout<<"This query step costs: "<<double(endTime- startTime) / CLOCKS_PER_SEC <<"s"<<endl;
+          //cout<<"This query step costs: "<<double(endTime- startTime) / CLOCKS_PER_SEC <<"s"<<endl;
 
           //out.close();
           //out.clear();
