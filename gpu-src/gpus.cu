@@ -1,23 +1,9 @@
-#include <iostream>
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
-#include <stdlib.h>
-#include <vector>
-#include <sys/time.h>
-#include "gpus.cu"
-
-
+#include <iostream>
 using namespace std;
-
 #ifndef LeafN
 #define LeafN 99322
-#endif
-
-#ifndef OrderN
-#define OrderN 99321
-#endif
-#ifndef WarpSize
-#define WarpSize 32
 #endif
 #ifndef ABD
 #define ABD
@@ -29,6 +15,12 @@ struct Abd
 };
 #endif
 
+#ifndef OrderN
+#define OrderN 99321
+#endif
+#ifndef WarpSize
+#define WarpSize 32
+#endif
 #ifndef CMPDATA
 #define CMPDATA
 struct CompData
@@ -41,107 +33,74 @@ struct CompData
     int Id[LeafN];
 };
 #endif
+__global__ void gpu_Calc_sim(CompData *cd, Abd *v_Abd_1, Abd *v_Abd_2, float *results,int count);
 
-#ifndef GPUC
-#define GPUC
-__global__ void gpu_Calc_sim(CompData *cd, Abd *v_Abd_1, Abd *v_Abd_2, float *results, int count);
 
-class gpu_compare
-{
+#ifndef gpu
+#define gpu
+class GPU{
 public:
-    gpu_compare();
-    void init(int *GPUs,int count);
-    int sendData(CompData * cd, Abd * abd1, Abd * abd2,int count, int version = 2);
-    //please malloc or new memory space for these data, and don't free these memory untill you retrive the results
-    //count means the number of Abd2
-    //default to use second generation compare algorithm
+    int count,id,computSum;
+    int alloc;
+    int offset;
+    cudaDeviceProp deviceProp;
+    void init(int i);
+    void reset();
+    int sendData(CompData *, Abd *, Abd *);
     int act();
-    int getResult(float * putResult);
-    /*
-    error table  0 for all right, 1 for no enough memory
-    2 for error state for example, you ask the gpu_compare to act befor send data to it
-    */
+    int getResult(float *putResult);
 private:
-    bool memFlag;
-    int maxMem, deviceID, countCore,state,count;
-    GPU * gpus;
-    int gpuCount;
-    int version,compFlag;
-    int computSum;
+    bool compFlag;
+    struct Abd *abd1,*g_abd1,*abd2,*g_abd2;
+    struct CompData *compData,*g_compData;
+    float *results,*g_results;
 };
-
-gpu_compare::gpu_compare(){
-    computSum=0;
-    cout<<"using multi-GPU version\n";
+void GPU::init(int i){
+    this->id=i;
+    cudaGetDeviceProperties(&(this->deviceProp),id);
+    computSum=deviceProp.warpSize*deviceProp.multiProcessorCount;
+    alloc=offset=0;
+    compFlag= true;
+    return;
 }
-void gpu_compare::init(int *GPUs, int gpuCount)
-{
-    GPU gpu;
-    this->gpuCount=gpuCount;
-    gpus=new GPU[gpuCount];
-    for(int i=0;i<gpuCount;i++){
-        gpus[i].init(GPUs[i]);
-        computSum+=gpus[i].computSum;
-    }
-    this->state=1;
-    memFlag= true;
+void GPU::reset(){
+    alloc=offset=0;
+    cudaSetDevice(id);
+    cudaFree(g_abd1);
+    cudaFree(g_abd2);
+    cudaFree(g_results);
+    abd1=abd2=g_abd1=g_abd2=0;g_results=0;
 }
-int gpu_compare::sendData(CompData *cd, Abd *abd1, Abd *abd2,int count, int version )
-{
-    /*
-    1 for no enough memory
-    2 for state error
-    */
-    if (this->state!=1)
-    {
-        cout<<"gpu_compare is not in right state!\n";
-        return 2;
+int GPU::sendData(CompData *cd, Abd *first_abd, Abd *second_abd){
+    cudaSetDevice(id);
+    alloc=alloc+offset>count?count-offset:alloc;
+    if (deviceProp.totalGlobalMem<sizeof(float)*(LeafN*(alloc+1)+alloc)*1.1)
+        return 1;
+    abd1=first_abd;
+    abd2=second_abd+offset;
+    cudaMalloc((void **)&this->g_abd1,sizeof(Abd));
+    cudaMalloc((void **)&this->g_abd2,sizeof(Abd)*alloc);
+    cudaMalloc((void **)&this->g_results,sizeof(float)*alloc);
+    if(this->compFlag) {
+        cudaMalloc((void **) &this->g_compData, sizeof(CompData));
+        cudaMemcpy(this->g_compData,cd,sizeof(CompData),cudaMemcpyHostToDevice);
+        compFlag= false;
     }
-    this->count=count;
-    int offset=0;
-    for(int i=0;i<gpuCount;i++){
-        gpus[i].count=count;
-        gpus[i].alloc=gpus[i].computSum*(count/this->computSum+1);
-        gpus[i].offset=offset;
-        offset=gpus[i].alloc+offset;
-    }
-    for(int i=0;i<gpuCount;i++){
-        gpus[i].sendData(cd,abd1,abd2);
-        }
-    
-    this->state=2;
+    cudaMemcpy(this->g_abd1,abd1,sizeof(Abd),cudaMemcpyHostToDevice);
+    cudaMemcpy(this->g_abd2,abd2,sizeof(Abd)*alloc,cudaMemcpyHostToDevice);
     return 0;
 }
-
-int gpu_compare::act()
-{
-    for(int i=0;i<gpuCount;i++){
-        gpus[i].act();
-    }
-    this->state=3;
+int GPU::act(){
+    cudaSetDevice(id);
+    int blocks;
+    blocks=alloc/WarpSize+1;
+    gpu_Calc_sim<<<blocks, WarpSize>>>(g_compData, g_abd1, g_abd2, g_results,alloc);
     return 0;
 }
-
-int gpu_compare::getResult(float *putResult)
-{
-    if(this->state!=3)
-    {
-        cout<<"gpu_compare state error\n";
-        return 2;
-    }
-    for(int i=0;i<gpuCount;i++) {
-        gpus[i].getResult(putResult);
-        gpus[i].reset();
-    }
-    /*for(int i=0;i<count;i++)
-    {
-        cout<<i<<endl;
-        printf("the similarity is: %f",putResult[i]);
-    }*/
-    this-> state=4;
-    //putResult=this->results;
-
-    this->state=1;
+int GPU::getResult(float * putResult){
+    putResult+=offset;
+    cudaSetDevice(id);
+    cudaMemcpy(putResult, this->g_results, sizeof(float) * this->alloc,cudaMemcpyDeviceToHost);
     return 0;
 }
 #endif

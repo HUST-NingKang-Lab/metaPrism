@@ -7,7 +7,7 @@
 
 int printhelp(){
     
-    cout << "Welcome to Meta-Storms " << endl;
+    cout << "Welcome to Meta-Prism " << endl;
     cout << "Version : " << Version << endl;
     cout << "Usage : " << endl;
     cout << "add_sam [-option] value" << endl;
@@ -61,7 +61,7 @@ int main(int argc, char * argv[]){
     if (pos != string::npos)
             samplepath = samplepath.substr(0, pos);                                    
     
-    cout << "Welcome to Meta-Storms Beta " << endl;
+    cout << "Welcome to Meta-Prism Beta " << endl;
     
     Meta_Database database(indexname,biotype);
     if(biotype!="None"){

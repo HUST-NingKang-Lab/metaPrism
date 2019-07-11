@@ -12,6 +12,7 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/mman.h>
+#include <sys/time.h>
 
 
 #include <stdlib.h>
@@ -113,8 +114,11 @@ class Meta_Database{
       Meta_Database(string infilename,string biotype){
                            this->Entry_count = 0;
                            this->Entry_number = 0;
-                           this->Abundance = 0;    
+                           this->Abundance = 0;
                            this->Load_Index(infilename,biotype);
+                           this->loading_time=0;
+                           this->pairwise_comparison_time=0;
+
                            //this->result_score=new float [this->Entry_count+ 3000];
 
 
@@ -130,11 +134,18 @@ class Meta_Database{
                            this->Entry_count = 0;
                            this->Entry_number = 0;
                            this->Abundance = 0;    
-                           //gpu_step.initial_gpu(gpulist,count);
+                           gpu_step.init(gpulist,count);
                            this->Load_Index(infilename,biotype);
                             }                       
 
       ~Meta_Database(){};
+
+      void output_time(){
+        //cout<<"loading_time:"<<loading_time/1000000<<endl;
+        cout<<"index_time:"<<index_time/1000000<<endl;
+        //out<<"sorting_time:"<<sorting_time/1000000<<endl;
+        //cout<<"pairwise_comparison_time:"<<pairwise_comparison_time/1000000<<endl;
+      }
       
       void Insert_Index_by_Entry(Index_Entry * entry);
       void Insert_Group_by_Entry(Index_Entry * entry);
@@ -167,12 +178,17 @@ class Meta_Database{
       int decide_to_clust(vector<Index_Entry *>* entry, vector<biomes_entry* >* b_entry);
 
       //RAM version
-      unsigned int Parallel_Exhaustive_Query_RAM(ostream & out, string infilename, vector<string> &databaselist, map<string,float *> &database_map, int n, int t_number, int group,int is_gpu);
+      unsigned int Parallel_Exhaustive_Query_RAM(ostream & out, string infilename, vector<string> &databaselist, map<string,float *> &database_map, int n, int t_number, int group,string scoringtype,int is_gpu);
+
       unsigned int Parallel_Indexed_Query_RAM(ostream & out, string infilename,string biotype, vector<string> &databaselist, map<string,float *> &database_map, int n, int t_number,int group,string scoringtype, string filterflag,int is_gpu);
       unsigned int Parallel_Indexed_Query_RAM(string infilename, string query_key, string biotype, map<string,float* > &database_map, Meta_Result * results, int n, int t_number, int group, string scoringtype, string filterflag,double &comparison_time,int is_gpu);
 
 
-
+      //calc time
+       struct timeval index_begin,index_end;
+       struct timeval loading_begin,loading_end;
+       struct timeval out_begin,out_end;
+       double index_time,loading_time,sorting_time,pairwise_comparison_time;
 
 
     private:
@@ -190,6 +206,11 @@ class Meta_Database{
               //for gpu compare
               gpu_compare gpu_step;
               float * result_score;
+
+
+              
+
+
               
 
               //string Path;                            
@@ -243,7 +264,7 @@ class Meta_Database{
 
 int get_compData(CompData *cd)
 {
-    cout<<"begin to copy"<<endl;
+    //cout<<"begin to copy"<<endl;
     memcpy(cd->Dist_1, Dist_1, sizeof(float) * OrderN);
     memcpy(cd->Dist_2, Dist_2, sizeof(float) * OrderN);
     memcpy(cd->Order_1, Order_1, sizeof(int) * OrderN);
@@ -273,6 +294,10 @@ struct Argument{
        int flag;
        double comparison_time;
        Meta_Result * buffer;
+
+       double loading_time;
+       double pairwise_comparison_time;
+       //struct time_val loading_begin,loading_end;
 
        };
 

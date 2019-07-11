@@ -1,0 +1,4 @@
+query_index -> meta_database.h 
+Parallel_Indexed_Query -> Parallel_Query -> Parallel_Query_Static comp_sa
+meta_base.h -> comp.h
+insert by entry

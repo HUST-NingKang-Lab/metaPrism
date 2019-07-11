@@ -43,7 +43,7 @@ struct Argument{
 
 int printhelp(){
     
-    cout << "Welcome to Meta-Storms Beta " << endl;
+    cout << "Welcome to Meta-Prism Beta " << endl;
     cout << "Version : " << Version << endl;
     cout << "Usage : " << endl;
     cout << "comp_sam [-option] value" << endl;

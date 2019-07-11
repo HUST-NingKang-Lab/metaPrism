@@ -7,7 +7,7 @@
 
 int printhelp(){
     
-    cout << "Welcome to Meta-Storms " << endl;
+    cout << "Welcome to Meta-Prism " << endl;
     cout << "Version : " << Version << endl;
     cout << "Usage : " << endl;
     cout << "add_index [-option] value" << endl;
@@ -56,7 +56,7 @@ int main(int argc, char * argv[]){
          i+=2;
          } 
     
-    cout << "Welcome to Meta-Storms Beta " << endl;
+    cout << "Welcome to Meta-Prism Beta " << endl;
     
     Meta_Database database(indexname,biotype);
     int add_count=database.Make_Index_Add(databasepath, biotype, group);

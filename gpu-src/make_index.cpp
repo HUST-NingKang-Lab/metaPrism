@@ -7,7 +7,7 @@ using namespace std;
 
 int printhelp(){
     
-    cout << "Welcome to Meta-Storms Beta " << endl;
+    cout << "Welcome to Meta-Prism Beta " << endl;
     cout << "Version : " << Version << endl;
     cout << "Usage : " << endl;
     cout << "make_index [-option] value" << endl;
@@ -58,7 +58,7 @@ int main(int argc, char * argv[]){
     
     
      
-    cout << "Welcome to Meta-Storms Beta " << endl;
+    cout << "Welcome to Meta-Prism Beta " << endl;
     Meta_Database database(databasename, databasepath, indexlevel);
     //cout << "begin to output index"<<endl;
     database.Out_Index(indexname);

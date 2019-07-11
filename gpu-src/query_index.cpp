@@ -11,7 +11,7 @@ using namespace std;
 
 int printhelp(){
     
-    cout << "Welcome to Meta-Storms Beta " << endl;
+    cout << "Welcome to Meta-Prism Beta " << endl;
     cout << "Version : " << Version << endl;
     cout << "Usage : " << endl;
     cout << "query_index [-option] value" << endl;
@@ -251,9 +251,9 @@ int parallel_load_database(string indexname,map<string, float *> &database_map,v
 
     endTime=clock();
     gettimeofday(&tv_end,NULL);
-    cout<<"This load_database step costs "<<double(endTime- startTime) / CLOCKS_PER_SEC <<" s"<<endl;
+    //cout<<"This load_database step costs "<<double(endTime- startTime) / CLOCKS_PER_SEC <<" s"<<endl;
     double time_use=double(tv_end.tv_sec-tv_begin.tv_sec)*1000000+double(tv_end.tv_usec-tv_begin.tv_usec);
-    cout<<"This load_database step costs "<<time_use<<" μs"<<endl;
+    cout<<"This load_database step costs "<<time_use/1000000<<" s"<<endl;
 
     return count;
 
@@ -345,13 +345,14 @@ int multi_query(string outpath,string filelist,string indexname,int n, int t, in
               exit(0);
                   }
        if(is_index==0){    
-              database.Parallel_Exhaustive_Query_RAM(out, *(input_iter),databaselist,database_map,n,t,group,is_gpu);
+              database.Parallel_Exhaustive_Query_RAM(out, *(input_iter),databaselist,database_map,n,t,group,scroingtype,is_gpu);
               
               }
 
       else{
 
         database.Parallel_Indexed_Query_RAM(out,*(input_iter),*(biome_iter),databaselist,database_map,n,t,group,scroingtype,filterflag,is_gpu);
+        //database.Parallel_Indexed_Query_RAM(out,*(input_iter),"none",databaselist,database_map,n,t,group,scroingtype,filterflag,is_gpu);
       }
 
 
@@ -365,11 +366,12 @@ int multi_query(string outpath,string filelist,string indexname,int n, int t, in
     else{
 
       if(is_index==0){
-      database.Parallel_Exhaustive_Query_RAM(cout, *(input_iter),databaselist,database_map,n,t,group,is_gpu);
+      database.Parallel_Exhaustive_Query_RAM(cout, *(input_iter),databaselist,database_map,n,t,group,scroingtype,is_gpu);
     }
 
       else{
         database.Parallel_Indexed_Query_RAM(cout, *(input_iter),*(biome_iter),databaselist,database_map,n,t,group,scroingtype,filterflag,is_gpu);
+        //database.Parallel_Indexed_Query_RAM(cout, *(input_iter),"none",databaselist,database_map,n,t,group,scroingtype,filterflag,is_gpu);
       }
     }
 
@@ -379,7 +381,45 @@ int multi_query(string outpath,string filelist,string indexname,int n, int t, in
 
 }
 
+int* GetGpuList(const string& s, int &count, string c)
+{
+    string::size_type pos1;
+    string::size_type pos2;
+    vector<string> v;
+    pos2 = s.find(c);
+    pos1 = 0;
+  int * res;
+    while(string::npos != pos2)
+    {
+        v.push_back(s.substr(pos1, pos2-pos1));
+         
+        pos1 = pos2 + c.size();
+        pos2 = s.find(c, pos1);
+    }
+    if(pos1 != s.length())
+        v.push_back(s.substr(pos1));
 
+      vector<string> :: iterator iter=v.begin();
+  count=v.size();
+  //cout<<"count:"<<count<<endl;
+  res=new int[count];
+    int i=0;
+    while(iter!=v.end()){
+
+        //cout<<atoi((*iter).c_str())<<endl;
+      res[i]=atoi((*iter).c_str());
+      //cout<<res[i]<<endl;
+      
+      iter++;
+      i++;
+    }
+  
+  
+  return res;
+      //biome=(*iter);
+      //cout<<biome<<endl;
+
+}
 
 int main(int argc, char * argv[]){
     struct timeval tv_begin,tv_end;
@@ -398,8 +438,9 @@ int main(int argc, char * argv[]){
     int is_gpu=0;
 
     // temp 
-    int gpulist[2]={0,1};
-    int count=2;
+    //int gpulist[2]={0,1};
+    int * gpulist;
+    int count=0;
 
 
 
@@ -435,18 +476,18 @@ int main(int argc, char * argv[]){
                             case 'l': mode=1;filelist=argv[i+1];break;
                             case 'c': is_gpu=1;break;
                             //case 'm': 
+                            case 'm': is_gpu=1;gpulist=GetGpuList(argv[i+1],count,",");break;
                             default : printf("Unrec argument %s\n", argv[i]); printhelp(); break; 
                             }
          i+=2;
          } 
     
-    cout << "Welcome to Meta-Storms Beta " << endl;
+    cout << "Welcome to Meta-Prism Beta " << endl;
     
     /*if(is_gpu==0)
       Meta_Database database(indexname,biotype);
-    else
-    */
-    Meta_Database database(indexname,biotype,gpulist,count);
+    else*/
+      Meta_Database database(indexname,biotype,gpulist,count);
     
 
     if(mode == 0){
@@ -462,10 +503,8 @@ int main(int argc, char * argv[]){
                               database.Parallel_Indexed_Query(out, queryfilename,biotype, r_number, t_number, group,scroingtype,filterflag);
                            else
                               database.Parallel_Exhaustive_Query(out, queryfilename, r_number, t_number, group, scroingtype,filterflag);
-                           
                            out.close();
                            out.clear();
-                           
                            } 
     //cout
     else {
@@ -479,32 +518,20 @@ int main(int argc, char * argv[]){
     endTime=clock();
     gettimeofday(&tv_end,NULL);
     double time_use=double(tv_end.tv_sec-tv_begin.tv_sec)*1000000+double(tv_end.tv_usec-tv_begin.tv_usec);
-    cout<<"This query step costs: "<<double(endTime- startTime) / CLOCKS_PER_SEC <<"s"<<endl;
+    //cout<<"This query step costs: "<<double(endTime- startTime) / CLOCKS_PER_SEC <<"s"<<endl;
     cout<<"This query step costs: "<<time_use / 1000000 <<" s"<<endl;
-
-         
     }
-
-
     else{
-       
-
-  
           multi_query(outfilename,filelist,indexname,r_number,t_number,group,scroingtype,filterflag,is_index,database,is_gpu);
           endTime=clock();
           gettimeofday(&tv_end,NULL);
           double time_use=double(tv_end.tv_sec-tv_begin.tv_sec)*1000000+double(tv_end.tv_usec-tv_begin.tv_usec);
  
           cout<<"This query step costs: "<<time_use / 1000000<<" s"<<endl;
-          cout<<"This query step costs: "<<double(endTime- startTime) / CLOCKS_PER_SEC <<"s"<<endl;
+          //cout<<"This query step costs: "<<double(endTime- startTime) / CLOCKS_PER_SEC <<"s"<<endl;
 
           //out.close();
           //out.clear();
-
-        
-
-
-
     }
     
     return 0;

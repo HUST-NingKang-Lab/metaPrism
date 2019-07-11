@@ -1,10 +1,9 @@
 #include <iostream>
+
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include <stdlib.h>
-#include <vector>
 #include <sys/time.h>
-#include "gpus.cu"
 
 
 using namespace std;
@@ -16,21 +15,13 @@ using namespace std;
 #ifndef OrderN
 #define OrderN 99321
 #endif
-#ifndef WarpSize
-#define WarpSize 32
-#endif
-#ifndef ABD
-#define ABD
+
 struct Abd
 {
     //char name[20];
     string name;
     float data[LeafN];
 };
-#endif
-
-#ifndef CMPDATA
-#define CMPDATA
 struct CompData
 {
     float Dist_1[OrderN];
@@ -40,17 +31,22 @@ struct CompData
     int Order_d[OrderN];
     int Id[LeafN];
 };
-#endif
+
+
+
+
+
+
 
 #ifndef GPUC
 #define GPUC
+
 __global__ void gpu_Calc_sim(CompData *cd, Abd *v_Abd_1, Abd *v_Abd_2, float *results, int count);
 
 class gpu_compare
 {
 public:
     gpu_compare();
-    void init(int *GPUs,int count);
     int sendData(CompData * cd, Abd * abd1, Abd * abd2,int count, int version = 2);
     //please malloc or new memory space for these data, and don't free these memory untill you retrive the results
     //count means the number of Abd2
@@ -61,30 +57,35 @@ public:
     error table  0 for all right, 1 for no enough memory
     2 for error state for example, you ask the gpu_compare to act befor send data to it
     */
+
 private:
-    bool memFlag;
     int maxMem, deviceID, countCore,state,count;
-    GPU * gpus;
-    int gpuCount;
+    cudaDeviceProp deviceProp;
+    size_t freeMem, totalMem;
+    CompData *compData, *g_compData;
+    Abd *abd1, *abd2, *g_abd1, *g_abd2;
+    float *results, *g_results;
     int version,compFlag;
-    int computSum;
 };
 
-gpu_compare::gpu_compare(){
-    computSum=0;
-    cout<<"using multi-GPU version\n";
-}
-void gpu_compare::init(int *GPUs, int gpuCount)
+gpu_compare::gpu_compare()
 {
-    GPU gpu;
-    this->gpuCount=gpuCount;
-    gpus=new GPU[gpuCount];
-    for(int i=0;i<gpuCount;i++){
-        gpus[i].init(GPUs[i]);
-        computSum+=gpus[i].computSum;
+    cudaChooseDevice(&this->deviceID, &this->deviceProp);
+    cudaGetDeviceProperties(&this->deviceProp, this->deviceID);
+    this->maxMem = this->deviceProp.totalGlobalMem;
+    this->countCore = this->deviceProp.multiProcessorCount;
+    cudaMemGetInfo(&freeMem, &totalMem);
+    //cout<<"the best block size is : "<<this->bestBlockSize<<endl;
+	//cout<<"the min Grid size is : "<<this->minGridSize<<endl;
+    if(1)
+    {
+        cout<<"now using "<<this->deviceProp.name<<" device id:"<<this->deviceID<<endl;
+        cout<<"count of SM is "<<this->deviceProp.multiProcessorCount<<endl;
+        cout<<"warp size is (threads per SM) "<<this->deviceProp.warpSize<<endl;
+
     }
+    this->compFlag=1;
     this->state=1;
-    memFlag= true;
 }
 int gpu_compare::sendData(CompData *cd, Abd *abd1, Abd *abd2,int count, int version )
 {
@@ -98,26 +99,46 @@ int gpu_compare::sendData(CompData *cd, Abd *abd1, Abd *abd2,int count, int vers
         return 2;
     }
     this->count=count;
-    int offset=0;
-    for(int i=0;i<gpuCount;i++){
-        gpus[i].count=count;
-        gpus[i].alloc=gpus[i].computSum*(count/this->computSum+1);
-        gpus[i].offset=offset;
-        offset=gpus[i].alloc+offset;
+    this->compData = cd;
+    this->abd1 = abd1;
+    this->abd2 = abd2;
+    this->version = version;
+	
+    if (totalMem<sizeof(float)*(LeafN*(count+1)+count)*1.1)
+    {
+        cout<<"no enough gpu memory, will update later to support it\n";
+        return 1;
     }
-    for(int i=0;i<gpuCount;i++){
-        gpus[i].sendData(cd,abd1,abd2);
+    else
+    {
+        // malloc the memory
+        cudaMalloc((void **)&this->g_abd1,sizeof(Abd));
+        cudaMalloc((void **)&this->g_abd2,sizeof(Abd)*count);
+        cudaMalloc((void **)&this->g_results,sizeof(float)*count);
+        if(this->compFlag) {
+            cudaMalloc((void **) &this->g_compData, sizeof(CompData));
+            compFlag=0;
         }
-    
+    }
+    //send memory from main mamory to GPU memory
+    cudaMemcpy(this->g_compData,cd,sizeof(CompData),cudaMemcpyHostToDevice);
+    cudaMemcpy(this->g_abd1,abd1,sizeof(Abd),cudaMemcpyHostToDevice);
+    cudaMemcpy(this->g_abd2,abd2,sizeof(Abd)*count,cudaMemcpyHostToDevice);
+
     this->state=2;
     return 0;
 }
 
 int gpu_compare::act()
 {
-    for(int i=0;i<gpuCount;i++){
-        gpus[i].act();
+    int wrapSize,i,blocks,wrapCount;
+    if(this->state!=2)
+    {
+        cout<<"gpu_compare state error\n";
+        return 2;
     }
+    blocks=this->count/16+1;
+    gpu_Calc_sim<<<blocks, 16>>>(this->g_compData, this->g_abd1, this->g_abd2, this->g_results,this->count);
     this->state=3;
     return 0;
 }
@@ -129,10 +150,9 @@ int gpu_compare::getResult(float *putResult)
         cout<<"gpu_compare state error\n";
         return 2;
     }
-    for(int i=0;i<gpuCount;i++) {
-        gpus[i].getResult(putResult);
-        gpus[i].reset();
-    }
+    this->results=putResult;
+    //this->results=new float[count];
+    cudaMemcpy(this->results, this->g_results, sizeof(float) * this->count,cudaMemcpyDeviceToHost);
     /*for(int i=0;i<count;i++)
     {
         cout<<i<<endl;
@@ -141,12 +161,13 @@ int gpu_compare::getResult(float *putResult)
     this-> state=4;
     //putResult=this->results;
 
+    cudaFree(this->g_abd1);
+    cudaFree(this->g_abd2);
+    cudaFree(this->g_results);
+
     this->state=1;
     return 0;
 }
-#endif
-#ifndef calc
-#define calc
 __global__ void gpu_Calc_sim(CompData *cd, Abd *v_Abd_1, Abd *v_Abd_2, float *results,int count)
 {
     //process memory data
@@ -176,6 +197,7 @@ __global__ void gpu_Calc_sim(CompData *cd, Abd *v_Abd_1, Abd *v_Abd_2, float *re
     //start origin data
     float Reg_1[70];
     float Reg_2[70];
+    float Reg_abs[70];
 
     float total = 0;
     float total2=0;
@@ -198,39 +220,63 @@ __global__ void gpu_Calc_sim(CompData *cd, Abd *v_Abd_1, Abd *v_Abd_2, float *re
         float c2_1;
         float c2_2;
 
+        float abs_1;
+        float abs_2;
 
         if (order_1 >= 0){
 
             c1_1 = Abd_1[order_1];
             c1_2 = Abd_2[order_1];
+            abs_1=abs(Abd_1[order_1]- Abd_2[order_1]) * 0.5;
         }
         else {
             c1_1 = Reg_1[order_1 + 70];
             c1_2 = Reg_2[order_1 + 70];
+            abs_1=Reg_abs[order_1 + 70];
         }
 
         if (order_2 >= 0){
 
             c2_1 = Abd_1[order_2];
             c2_2 = Abd_2[order_2];
+            abs_2=abs(Abd_1[order_2]-Abd_2[order_2]) * 0.5;
 
         }
         else {
             c2_1 = Reg_1[order_2 + 70];
             c2_2 = Reg_2[order_2 + 70];
+            abs_2 = Reg_abs[order_2 + 70];
         }
         //min
         float min_1 = (c1_1 < c1_2)?c1_1:c1_2;
         float min_2 = (c2_1 < c2_2)?c2_1:c2_2;
 
         total += min_1;
+        total2 += abs(c1_1-c1_2);
+
+
         total += min_2;
+        total2 += abs(c2_1-c2_2);
+
+
+        /*if(abs(c2_1-c2_2) !=0  || abs(c1_1-c1_2) !=0)
+        {
+        cout<<c1_1<<"-"<<c1_2<<"="<<c1_1-c1_2<<" "<<abs(c1_1-c1_2)<<endl;
+        cout<<c2_1<<"-"<<c2_2<<"="<<c2_1-c2_2<<" "<<abs(c2_1-c2_2)<<endl;
+        cout<<"total2:"<<total2<<endl;
+        }
+        */
+
+
 
         //reduce
         Reg_1[order_d] = (c1_1 - min_1) * dist_1 + (c2_1 - min_2) * dist_2;
         Reg_2[order_d] = (c1_2 - min_1) * dist_1 + (c2_2 - min_2) * dist_2;
+        Reg_abs[order_d]= abs_1*dist_1 + abs_2*dist_2;
+
         root = order_d;
     }
+
     total += (Reg_1[root] < Reg_2[root])?Reg_1[root]:Reg_2[root];
     //cout<<"total:"<<total<<endl;
     //total2 += abs(Reg_1[root]-Reg_2[root]);

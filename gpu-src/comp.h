@@ -454,7 +454,7 @@ float Comp_sam(const char * sam1, const char * sam2){
       //Calc_abundant(sam2);
 
 
-      float result =  Calc_sim(Abd_1, Abd_2, Order_1, Dist_1, Order_2, Dist_2, Order_d);
+      float result = Calc_sim(Abd_1, Abd_2, Order_1, Dist_1, Order_2, Dist_2, Order_d);
       //cout<<result<<"\t"<<abs(shannon_1-shannon_2)<<endl;
 
       return result;
@@ -485,10 +485,40 @@ float Comp_sam(float * Abd_1, const char * sam2,float &score1, float &score2){
       float * Abd_2 = new float[LeafN];
       
       //Load_abd(sam1, Id, Abd_1);
+      struct timeval loading_begin,loading_end;
+      gettimeofday(&loading_begin,NULL);
       Load_abd(sam2, Id, Abd_2);
+      gettimeofday(&loading_end,NULL);
+      double loading_time=double(loading_end.tv_sec-loading_begin.tv_sec)*1000000+double(loading_end.tv_usec-loading_begin.tv_usec);
 
+      struct timeval comparison_begin,comparison_end;
+      gettimeofday(&comparison_begin,NULL);
+      Calc_sim(Abd_1, Abd_2, Order_1, Dist_1, Order_2, Dist_2, Order_d,score1,score2);
+      gettimeofday(&comparison_end,NULL);
+      double comparison_time=double(comparison_end.tv_sec-comparison_begin.tv_sec)*1000000+double(comparison_end.tv_usec-comparison_begin.tv_usec);
+
+      return score1;
       
-      return Calc_sim(Abd_1, Abd_2, Order_1, Dist_1, Order_2, Dist_2, Order_d,score1,score2);
+      }
+
+float Comp_sam(float * Abd_1, const char * sam2,float &score1, float &score2,double &loading_time,double &comparison_time){
+      
+      //float * Abd_1 = new float[LeafN];
+      float * Abd_2 = new float[LeafN];
+      
+      //Load_abd(sam1, Id, Abd_1);
+      struct timeval loading_begin,loading_end;
+      gettimeofday(&loading_begin,NULL);
+      Load_abd(sam2, Id, Abd_2);
+      gettimeofday(&loading_end,NULL);
+      loading_time=double(loading_end.tv_sec-loading_begin.tv_sec)*1000000+double(loading_end.tv_usec-loading_begin.tv_usec);
+      struct timeval comparison_begin,comparison_end;
+      gettimeofday(&comparison_begin,NULL);
+      Calc_sim(Abd_1, Abd_2, Order_1, Dist_1, Order_2, Dist_2, Order_d,score1,score2);
+      gettimeofday(&comparison_end,NULL);
+      comparison_time=double(comparison_end.tv_sec-comparison_begin.tv_sec)*1000000+double(comparison_end.tv_usec-comparison_begin.tv_usec);
+
+      return score1;
       
       }
 
@@ -501,11 +531,9 @@ float Comp_sam(const char * sam1, const char * sam2,float &score1, float &score2
       
       float shannon_1 = Load_abd(sam1, Id, Abd_1);
       float shannon_2 = Load_abd(sam2, Id, Abd_2);
-      //Calc_sim(Abd_1, Abd_2, Order_1, Dist_1, Order_2, Dist_2, Order_d,score1,score2);
-      //cout<<score1<<"\t"<<score2<<endl;
+
       float result=Calc_sim(Abd_1, Abd_2, Order_1, Dist_1, Order_2, Dist_2, Order_d,score1,score2);
-      //cout<<"entropy:"<<abs(shannon_1- shannon_2)<<endl;
-      //cout<<"similarity:"<<score1<<endl;
+
       cout << abs(shannon_1- shannon_2) <<"\t"<< 1 <<endl;
       //cout<<score1 <<"\t"<< 2 <<endl;
 
@@ -566,9 +594,12 @@ bool Filter_main(const char * sam1, const char * sam2,float &score1,float &score
 
       float * Abd_1 = new float[LeafN];
       float * Abd_2 = new float[LeafN];
+
+
       
       float shannon_1=Load_abd(sam1, Id, Abd_1);
       float shannon_2=Load_abd(sam2, Id, Abd_2);
+
       //secTime=clock();
 
 
