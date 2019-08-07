@@ -5,19 +5,23 @@ Meta-Prism aims to conduct quick query in large-scale metagenomics database. The
 
 Environment variable
 ===========
-Export MetaPrism = The root path of MetaPrism
+Export MetaPrism = The root path of MetaPrism 
+
 Export PATH = “$PATH: The bin path of MetaPrism”
 
 Usage
 ===========
 Make index:
+
 make index [options] value
 	option:
 	-I samples input path
 	-o index output path
 	-n database name
 	-h help
+
 E.g. to make a new database named "DB1" using all samples locatedat /opt/data/database1, and save the database at ./DB1.
+
 $make_index -n DB1 -i /opt/data/database1 -o ./DB1
 
 
@@ -30,6 +34,7 @@ add_index [options] value
 
 
 Query:
+
 query_index [option] value
 	Option:
 	-d database index name
@@ -45,6 +50,7 @@ query_index [option] value
 	-h help
 
 E.g. to find the top 10 hits of a sample from marine located /opt/data/query_samples/marine/sample_1 in database DB1 using 8 CPU cores
+
 $query_index -d ./DB1 -i /opt/data/query_samples/marine/query_samples/sample_1/classification.txt -n 10 -t 8
 
 E.g. to find 10 samples' top 10 hit respectively, using 8 CPU cores, and save the result in ./result. These 10 samples' path are in a plain-text file "list.txt" with each file in a row like:
@@ -56,8 +62,11 @@ E.g. to find 10 samples' top 10 hit respectively, using 8 CPU cores, and save th
 ...
 /opt/data/query/lake/sample_9/classificiation.txt
 
+
 The command line is 
+
 $query_index -d ./DB1 -l list.txt -n 10 -t 8 -o ./results
+
 
 
 
