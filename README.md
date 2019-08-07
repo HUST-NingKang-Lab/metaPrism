@@ -6,12 +6,15 @@ Meta-Prism aims to conduct quick query in large-scale metagenomics database. The
 Environment variable
 ===========
 Export MetaPrism = The root path of MetaPrism 
+
 Export PATH = “$PATH: The bin path of MetaPrism”
 
 Usage
 ===========
 Make index:
+
 make index [options] value
+	
 	option:
 	-i samples input path
 	-o index output path
@@ -27,6 +30,7 @@ $make_index -n DB1 -i /opt/data/database1 -o ./DB1
 
 
 add_index [options] value
+	
 	option:
 	-i samples input path
 	-d database index name
@@ -35,7 +39,9 @@ add_index [options] value
 
 
 Query:
-	query_index [option] value
+	
+query_index [option] value
+	
 	Option:
 	-d database index name
 	-i query sample path
