@@ -78,6 +78,7 @@ $query_index -d ./DB1 -l list.txt -n 10 -t 8 -o ./results
 
 
 gpu_query_index [option] value
+	
 	Option:
 	-d database index name
 	-i query sample path
