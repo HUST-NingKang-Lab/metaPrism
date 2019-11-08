@@ -6,7 +6,6 @@
 #include <map>
 #include <vector>
 #include <time.h>
-
 #include <sys/types.h>
 #include <sys/dir.h>
 #include <sys/stat.h>
@@ -15,18 +14,23 @@
 #include <sys/time.h>
 
 
+
 #include <stdlib.h>
 #include <unistd.h>
 
 #include "index_entry.h"
+#include "meta_result.cpp"
 //#include "tree_class.h"
 #include "cfn.h"
 #include "comp.h"
-#include "gpu_compare16.cu"
 //#include "gpu_compare1.0.cu"
 
 #ifndef META_DATABASE_H
 #define META_DATABASE_H
+
+#include "meta_drive.cpp"
+#include "abdmap.cpp"
+#include "meta_result.cpp"
 
 #define Buffer_Size 1000
 #define i_min 15
@@ -37,52 +41,9 @@
 
 using namespace std;
 
-class Meta_Result{
-      private:
-        float m_value;
-        float n_value;
-        Index_Entry * entry;
-        basic_entry * b_entry;
-        bool be_filter;
-        //to be delete
-        float shannon;
-
-      
-      public:
-             
-             friend class Meta_Database;
-             
-             Meta_Result(){
-                        this->m_value =0;
-                        this->n_value=0;
-                        entry = 0;   
-                        b_entry=0;
-                        be_filter=false;
-                       //to be delete
-                        shannon=0;
-                           }
-             Meta_Result(float _value, Index_Entry * _entry ){
-                        m_value = _value;       
-                        entry = _entry;
-                        be_filter=false;
-                        //b_entry=0;       
-                      }   
-
-              Meta_Result(float _value, basic_entry * _entry ){
-                        m_value = _value;       
-                        b_entry = _entry;
-                        be_filter= false;
-                        //entry=0;       
-                      }
-
-
-              
-             
-       
-       };//end Meta_Result
-       
 class Meta_Database{ 
       public:
+    abdMap *abd_map;
       Meta_Database(){
                       this->Entry_count = 0;
                       this->Entry_number = 0;
@@ -130,14 +91,14 @@ class Meta_Database{
                            //cout<<"biome size:"<<Meta_biomes.size()<<endl;
                            //Comp_init();   
                            }
-      Meta_Database(string infilename,string biotype,int * gpulist,int count){
+      Meta_Database(string infilename,string biotype,abdMap* abd_map){
                            this->Entry_count = 0;
                            this->Entry_number = 0;
-                           this->Abundance = 0;    
-                           gpu_step.init(gpulist,count);
+                           this->Abundance = 0;
+                           this->abd_map=abd_map;
                            this->Load_Index(infilename,biotype);
-                            }                       
-
+                           //gpu_step.init();
+                            }
       ~Meta_Database(){};
 
       void output_time(){
@@ -204,7 +165,6 @@ class Meta_Database{
               int Abundance;
               
               //for gpu compare
-              gpu_compare gpu_step;
               float * result_score;
 
 
@@ -254,7 +214,7 @@ class Meta_Database{
               //GPU version
               //unsigned int GPU_Parallel_Query_RAM(string infilename, basic_entry ** list, map<string,float* > &database_map,Meta_Result * results,int n, int t_number, const int count,int group,string scoringtype,string filterflag,double &comparison_time,gpu_compare * gpu_step);
               //unsigned int GPU_Parallel_Query_RAM(string infilename, Index_Entry ** list, map<string,float* > &database_map,Meta_Result * results,int n, int t_number, const int count,int group,string scoringtype,string filterflag,double &comparison_time,gpu_compare * gpu_step);
-              unsigned int GPU_Parallel_Query_RAM(string infilename, basic_entry ** list, map<string,float* > &database_map,Meta_Result * results,int n, int t_number, const int count,int group,string scoringtype,string filterflag,double &comparison_time);
+              unsigned int GPU_Parallel_Query_RAM(string infilename, basic_entry** list, map<string,float* > &database_map,Meta_Result * results,int n, int t_number, const int count,int group,string scoringtype,string filterflag,double &comparison_time);
               unsigned int GPU_Parallel_Query_RAM(string infilename, Index_Entry ** list, map<string,float* > &database_map,Meta_Result * results,int n, int t_number, const int count,int group,string scoringtype,string filterflag,double &comparison_time);
 
               

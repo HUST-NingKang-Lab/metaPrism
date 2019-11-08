@@ -101,8 +101,7 @@ int Read_file(const char * infilename, map<string, unsigned int> (&table)[7]){
                                res[k] = temp;
                                }
                                
-        int num = 4;
-        
+
         for (int j = 0; j < table[i].size(); j++){
             
             out << res[j].name << ": ";

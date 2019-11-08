@@ -168,7 +168,6 @@ class Meta_Database{
 
       //RAM version
       unsigned int Parallel_Exhaustive_Query_RAM(ostream & out, string infilename, vector<string> &databaselist, map<string,float *> &database_map, int n, int t_number, int group,string scoringtype);
-
       unsigned int Parallel_Indexed_Query_RAM(ostream & out, string infilename,string biotype, vector<string> &databaselist, map<string,float *> &database_map, int n, int t_number,int group,string scoringtype, string filterflag);
       unsigned int Parallel_Indexed_Query_RAM(string infilename, string query_key, string biotype, map<string,float* > &database_map, Meta_Result * results, int n, int t_number, int group, string scoringtype, string filterflag,double &comparison_time);
 

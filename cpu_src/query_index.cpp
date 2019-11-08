@@ -18,7 +18,6 @@ int printhelp(){
     cout << "\toption : " << endl;
     cout << "\t-d database index name" << endl;
     cout << "\t-i query sample path" << endl;
-    cout << "\t-o result output file, default is to output on screen" << endl;
     cout << "\t-n hit number, default is 5" << endl;
     cout << "\t-e exhaustive search" << endl;
     cout << "\t-g to assign group number, default is off" << endl;
@@ -155,107 +154,12 @@ int load_database(string indexname,map<string, float *> &database_map,vector<str
         load_abd(filename,Abd,Id);
         database_map[filename]=Abd;
         f_count++;
-        //delete [] Abd;
-        //temp_database.push_back(database_map);
-        //cout<<endl;
-
     }
 
     return f_count;
 
 
 }
-
-
-void* parallel_execution(void * args){
-  vector<string>* p_databaselist=((Arg*)args)->p_databaselist;
-  map<string, float* >* p_database_map=((Arg*)args)->p_database_map;
-  int per_number=((Arg*)args)->per_number;
-  int thread=((Arg*)args)->thread;
-  int count=((Arg*)args)->count;
-
-  for(int i=0;i<per_number;i++){
-    int sam_file =  thread * per_number + i;
-    if (sam_file >= count) break;
-    float * Abd = new float [LeafN];
-    string filename= (*(p_databaselist))[i];
-    load_abd(filename,Abd,Id);
-    (*p_database_map)[filename]=Abd;
-    //cout<<filename<<endl;
-   
-  }
-
-  pthread_exit(0);
-
-}
-
-
-int parallel_load_database(string indexname,map<string, float *> &database_map,vector<string> &databaselist,int t_number){
-  struct timeval tv_begin,tv_end;
-  time_t startTime,endTime;
-  gettimeofday(&tv_begin,NULL);
-  startTime=clock();
-
-  string nametable=indexname+"/"+"nametable.txt";
-  int count=0;  
-    ifstream in_name(nametable.c_str(),ifstream::in);
-    if(!in_name){
-        cerr <<"Error: Cannot Open Database Index File : " << nametable << endl;
-                 exit(0);
-    }
-    string buffer;
-    Comp_init();
-    int f_count=0;
-    //meta information
-    getline(in_name,buffer);
-    //label
-    getline(in_name,buffer);
-
-    while(getline(in_name,buffer)){
-      string filename=extractfilename(buffer)+"/classification.txt";
-      databaselist.push_back(filename);
-      count = count +1;
-    }
-    t_number = (t_number < count)? t_number : count;
-    if (t_number == 0 || t_number > sysconf(_SC_NPROCESSORS_CONF))
-                    t_number = sysconf(_SC_NPROCESSORS_CONF);
-                                         
-                   //Allocation tasks for threads
-                        
-    int per_number = count /t_number;
-    int after_filter_count=0;
-                  //cout<<"per_number:"<<per_number<<endl;
-                  
-    if (count % t_number !=0)
-               per_number++;
-
-    Arg args[t_number];
-    pthread_t t[t_number];
-    for(int i=0;i<t_number;i++){
-      args[i].p_databaselist=&databaselist;
-      args[i].p_database_map=&database_map;
-      args[i].per_number=per_number;
-      args[i].count=count;
-      args[i].thread=i;
-
-      pthread_create(&(t[i]),NULL, parallel_execution,&(args[i]));
-    }
-
-
-    for(int i=0;i<t_number;i++){
-      pthread_join(t[i], NULL);
-    }
-
-    endTime=clock();
-    gettimeofday(&tv_end,NULL);
-    //cout<<"This load_database step costs "<<double(endTime- startTime) / CLOCKS_PER_SEC <<" s"<<endl;
-    double time_use=double(tv_end.tv_sec-tv_begin.tv_sec)*1000000+double(tv_end.tv_usec-tv_begin.tv_usec);
-    cout<<"This load_database step costs "<<time_use/1000000<<" s"<<endl;
-
-    return count;
-
-}
-
 
 void GetBiome(const string& s, string &biome, const string& c)
 {
@@ -315,13 +219,9 @@ int multi_query(string outpath,string filelist,string indexname,int n, int t, in
     vector<string> databaselist;
     vector<string> biomelist;
     map<string,float *> database_map;
-
-
+    cout<<"loading database\n";
     load_database(indexname,database_map,databaselist);
-    parallel_load_database(indexname,database_map,databaselist,t);
-
-
-
+    cout<<"loading finished\n";
     load_input(filelist,inputlist,namelist,biomelist);
 
     vector<string> :: iterator input_iter;
@@ -330,46 +230,14 @@ int multi_query(string outpath,string filelist,string indexname,int n, int t, in
     for(input_iter=inputlist.begin();input_iter!=inputlist.end();input_iter++){
       //cout<<"begin to query"<<endl;
       //cout<<*(input_iter)<<endl;
-    if(outpath.size()>0){
-       string outfilename=outpath+"/"+*(output_iter);
-       ofstream out(outfilename.c_str(), ofstream::out);
-
-
-
-
-       if (!out){
-              cerr << "Open output file error : " << outfilename << endl;
-              exit(0);
-                  }
-       if(is_index==0){    
-              database.Parallel_Exhaustive_Query_RAM(out, *(input_iter),databaselist,database_map,n,t,group,scroingtype);
-              
-              }
-
-      else{
-
-        database.Parallel_Indexed_Query_RAM(out,*(input_iter),*(biome_iter),databaselist,database_map,n,t,group,scroingtype,filterflag);
-      }
-
-
-
-
-
-
-
-
-    }
-    else{
-
+    {
       if(is_index==0){
       database.Parallel_Exhaustive_Query_RAM(cout, *(input_iter),databaselist,database_map,n,t,group,scroingtype);
     }
-
       else{
         database.Parallel_Indexed_Query_RAM(cout, *(input_iter),*(biome_iter),databaselist,database_map,n,t,group,scroingtype,filterflag);
       }
     }
-
     biome_iter++;
     output_iter++;
   }
@@ -415,7 +283,6 @@ int main(int argc, char * argv[]){
                             case 't': t_number = atoi(argv[i+1]); break;
                             case 'e': is_index = 0; i--; break;
                             case 'n': r_number = atoi(argv[i+1]); break;
-                            case 'o': outfilename = argv[i+1]; break;
                             case 'g': group = atoi(argv[i+1]); break;
                             case 'b': biotype = argv[i+1];break;
                             case 's': scroingtype=argv[i+1];break;
@@ -426,7 +293,7 @@ int main(int argc, char * argv[]){
          i+=2;
          } 
     
-    cout << "Welcome to Meta-Storms Beta " << endl;
+    cout << "Welcome to Meta-Prism Beta " << endl;
     
     Meta_Database database(indexname,biotype);
     
@@ -449,9 +316,7 @@ int main(int argc, char * argv[]){
                            out.clear();
                            
                            } 
-    //cout
     else {
-        //cout<<queryfilename<<'\t'<<biotype<<endl;
          if (is_index == 1)
               database.Parallel_Indexed_Query(cout, queryfilename, biotype,r_number, t_number, group,scroingtype, filterflag);
          else
