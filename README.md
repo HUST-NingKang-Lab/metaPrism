@@ -5,13 +5,21 @@ Meta-Prism aims to conduct quick query in large-scale metagenomics database. The
 We successfully compiled and tested the executable files by CUDA 10.1 for GPU code, and GCC 4.8.5 for CPU code, running on CentOS 7.6. It is highly possible to run on server with Linux and GCC support C++11 and CUDA 10 or higher.
 ## Install and Build
 Download the source code:
+
 `git clone https://github.com/HUST-NingKang-Lab/metaPrism.git`
+
 Build index manage tools:
+
 `make tool`
+
 Build cpu query tool:
+
 `make cpu`
+
 Build gpu query tool (::**highly recommend**::):
+
 `make gpu`
+
 ## Structure of sample data
 Meta-Prism now accepts the metagenomic samples analysis result pre-computed by Parallel-Meta.
 ## Usage
